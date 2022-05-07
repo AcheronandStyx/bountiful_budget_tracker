@@ -12,8 +12,9 @@ request.onupgradeneeded = function (event) {
 request.onsuccess = function (event) {
   db = event.target.result;
   // if app is online upload the new transaction
+  console.log("onsuccess triggered");
   if (navigator.online) {
-    // uploadTransaction();
+    uploadTransaction();
   }
 };
 
@@ -34,3 +35,51 @@ function saveRecord(record) {
   // add the offline transaction to the store
   transactionObjectStore.add(record);
 }
+
+function uploadTransaction() {
+  // open a db transaction
+  const transaction = db.transaction(["offline_transaction"], "readwrite");
+  // access the object store
+  const transactionObjectStore = transaction.objectStore("offline_transaction");
+  // get all the records and set to a variable
+  const getAll = transactionObjectStore.getAll();
+
+  getAll.onsuccess = function () {
+    // if objects are in store upload them
+    if (getAll.result.length > 0) {
+      fetch("/api/transaction", {
+        method: "POST",
+        body: JSON.stringify(getAll.result),
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((serverResponse) => {
+          if (serverResponse.message) {
+            throw new Error(serverResponse);
+          }
+          // open another db transaction
+          const transaction = db.transaction(
+            ["offline_transaction"],
+            "readwrite"
+          );
+          // access the object store
+          const transactionObjectStore = transaction.objectStore(
+            "offline_transaction"
+          );
+          // clear the object store after upload so dups can't be uploaded later
+          transactionObjectStore.clear();
+
+          alert("Saved transactions have been uploaded.");
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+  };
+}
+
+// when app goes online call uploadTransaction
+window.addEventListener("online", uploadTransaction);
