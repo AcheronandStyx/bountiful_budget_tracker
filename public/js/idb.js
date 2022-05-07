@@ -6,7 +6,7 @@ const request = indexedDB.open("offlineTransactions", 1); // establish a connect
 // it then creates the object store to house transactions which were entered while offline
 request.onupgradeneeded = function (event) {
   const db = event.target.result;
-  db.createObjectStores("offline_transaction", { autoIncrement: true }); // Set auto-increment to true to ensure unique indexes for each object and ease of data retrieval
+  db.createObjectStore("offline_transaction", { autoIncrement: true }); // Set auto-increment to true to ensure unique indexes for each object and ease of data retrieval
 };
 
 request.onsuccess = function (event) {
@@ -25,11 +25,12 @@ request.onerror = function (event) {
 function saveRecord(record) {
   console.log("entered saveRecord", record);
   // open a new transaction with the db and grant read/write permission
-  const Transaction = db.transaction(["offline_transaction"], "readwrite");
-  console.log("transaction created", Transaction);
+  const transaction = db.transaction(["offline_transaction"], "readwrite");
+  console.log("transaction created", transaction);
   // access the objectStore
-  const transactionObjectStore = transaction.objectStore("new_transaction");
+  const transactionObjectStore = transaction.objectStore("offline_transaction");
 
+  console.log(transactionObjectStore);
   // add the offline transaction to the store
   transactionObjectStore.add(record);
 }
